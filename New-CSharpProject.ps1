@@ -1,13 +1,18 @@
 param(
-    [Parameter(Mandatory=$true)][string]$ProjectName
+    [Parameter(Mandatory=$true)][string]$Author,
+    [Parameter(Mandatory=$true)][string]$ProjectName,
+    [string]$FolderName=""
 )
 
-if (Test-Path -Path $ProjectName) {
-    throw "'$ProjectName' already exists!"
+if ($FolderName -eq "") {
+    $FolderName = $ProjectName
 }
 
-$CurrentYear = "2021"
-$GitUser = "my0n"
+if (Test-Path -Path $FolderName) {
+    throw "'$FolderName' already exists!"
+}
+
+$CurrentYear = Get-Date -Format "yyyy"
 $ProjectPaths = @("src\$ProjectName\$ProjectName.csproj"; "tests\$ProjectName.Tests\$ProjectName.Tests.csproj")
 $SolutionItemPaths = @(".gitignore"; "README.md"; "LICENSE"; ".github\dependabot.yml"; ".github\workflows\build.yml")
 
@@ -28,7 +33,7 @@ function GenerateSlnFileContents()
     foreach ($ProjectPath in $ProjectPaths)
     {
         $ProjectGuid = GenerateNewGuid
-        $ProjectName = $ProjectPath.Split("\")[-1].Replace(".csproj","")
+        $CsProjectName = $ProjectPath.Split("\")[-1].Replace(".csproj","")
         $NestedFolderPath = $ProjectPath.Split("\")[0]
         if ($NestedFolderPath -eq "src")
         {
@@ -38,7 +43,7 @@ function GenerateSlnFileContents()
         {
             $NestedProjectsSection += "		{$ProjectGuid} = {$TestsFolderGuid}"
         }
-        $ProjectDeclarationSection += "Project(`"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}`") = `"$ProjectName`", `"$ProjectPath`", `"{$ProjectGuid}`""
+        $ProjectDeclarationSection += "Project(`"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}`") = `"$CsProjectName`", `"$ProjectPath`", `"{$ProjectGuid}`""
         $ProjectDeclarationSection += "EndProject"
         $ProjectConfigurationPlatformsSection += "		{$ProjectGuid}.Debug|Any CPU.ActiveCfg = Debug|Any CPU"
         $ProjectConfigurationPlatformsSection += "		{$ProjectGuid}.Debug|Any CPU.Build.0 = Debug|Any CPU"
@@ -100,7 +105,7 @@ function GenerateReadmeContents()
 function GenerateLicenseContents()
 {
     "MIT License"
-    "Copyright (c) $CurrentYear $GitUser"
+    "Copyright (c) $CurrentYear $Author"
     ""
     "Permission is hereby granted, free of charge, to any person obtaining a copy"
     "of this software and associated documentation files (the `"Software`"), to deal"
@@ -131,7 +136,7 @@ function GenerateDependabotConfig()
     "    interval: daily"
     "  open-pull-requests-limit: 10"
     "  reviewers:"
-    "  - `"$GitUser`""
+    "  - `"$Author`""
 }
 
 function GenerateBuildWorkflow()
@@ -184,8 +189,8 @@ function GenerateBuildWorkflow()
 }
 
 # create sln
-md $ProjectName
-pushd $ProjectName
+md $FolderName
+pushd $FolderName
 GenerateSlnFileContents | Add-Content -Path "$ProjectName.sln"
 
 # basic project setup
